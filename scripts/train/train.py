@@ -100,11 +100,12 @@ def validate_config(cfg: DictConfig):
         'te' in cfg.model.get('ffn_config', {}).get('ffn_type', 'mptmlp')
     ):
         fsdp_config = cfg.get('fsdp_config', None)
-        act_ckpt = fsdp_config.get('activation_checkpointing', False)
-        act_ckpt_reentrant = fsdp_config.get(
-            'activation_checkpointing_reentrant',
-            False,
-        )
+        if fsdp_config is not None:
+            act_ckpt = fsdp_config.get('activation_checkpointing', False)
+            act_ckpt_reentrant = fsdp_config.get(
+                'activation_checkpointing_reentrant',
+                False,
+            )
         if fsdp_config is not None and act_ckpt == True and act_ckpt_reentrant == True:
             warnings.warn(
                 '`te.Linear` layers do not support activation_checkpointing with '
@@ -146,14 +147,14 @@ def validate_config(cfg: DictConfig):
             raise ValueError('Training does not support sequence parallelism.')
 
 
-def _initialize_dist_with_barrier(dist_timeout: Union[int, float]):
+def _initialize_dist_with_barrier(dist_timeout: Union[int, float], device):
     """Initialize distributed and test setup with a barrier.
 
     Args:
         dist_timeout (Union[int, float]): Timeout for initializing the process group
     """
     log.debug('Initializing dist with device...')
-    dist.initialize_dist(get_device(None), timeout=dist_timeout)
+    dist.initialize_dist(get_device(device), timeout=dist_timeout)
     log.debug('Testing barrier with device...')
     dist.barrier()
     log.debug('Barrier test passed with device.')
@@ -219,6 +220,12 @@ def main(cfg: DictConfig) -> Trainer:
         must_exist=False,
         default_value=600.0,
     )
+    device: bool = pop_config(
+        cfg,
+        'device',
+        must_exist=False,
+        default_value=None
+    )
     python_log_level: Optional[str] = pop_config(
         cfg,
         'python_log_level',
@@ -240,7 +247,7 @@ def main(cfg: DictConfig) -> Trainer:
             python_log_level.upper(),
         )  # Train script
 
-    _initialize_dist_with_barrier(dist_timeout=dist_timeout)
+    _initialize_dist_with_barrier(dist_timeout=dist_timeout, device=device)
 
     # Get global and device batch size information from distributed/single node setting
     cfg = update_batch_size_info(cfg)
@@ -267,6 +274,13 @@ def main(cfg: DictConfig) -> Trainer:
         must_exist=False,
         default_value=None,
         convert=True,
+    )
+    deepspeed_config: Optional[Dict[str, Any]] = pop_config(
+        cfg,
+        'deepspeed_config',
+        must_exist=False,
+        default_value=None,
+        convert=True
     )
     eval_loader_config: Optional[
         Union[DictConfig, ListConfig]
@@ -751,7 +765,8 @@ def main(cfg: DictConfig) -> Trainer:
         dist_timeout=dist_timeout,
         profiler=profiler,
         compile_config=compile_config,
-    )
+        deepspeed_config=deepspeed_config,
+        device=device)
 
     if should_log_config:
         log.info('Logging config')
