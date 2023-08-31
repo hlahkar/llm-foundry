@@ -55,6 +55,7 @@ from llmfoundry.utils.registry_utils import import_file
 
 log = logging.getLogger(__name__)
 
+from streaming.base.util import clean_stale_shared_memory
 
 def validate_config(cfg: DictConfig):
     """Validates compatible model and dataloader selection."""
@@ -798,4 +799,5 @@ if __name__ == '__main__':
     cfg = om.merge(yaml_cfg, cli_cfg)
     om.resolve(cfg)
     assert isinstance(cfg, DictConfig)
+    print (cfg)
     main(cfg)
