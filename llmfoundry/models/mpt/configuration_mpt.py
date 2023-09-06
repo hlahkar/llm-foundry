@@ -67,6 +67,7 @@ class MPTConfig(PretrainedConfig):
         fc_type: str = 'torch',
         tie_word_embeddings: bool = True,
         use_pad_tok_in_ffn: bool = True,
+        ds_activation_checkpointing: bool = False,
         **kwargs: Any,
     ):
         """The MPT configuration class.
@@ -156,6 +157,7 @@ class MPTConfig(PretrainedConfig):
         self.init_config = init_config
         self.fc_type = fc_type
         self.use_pad_tok_in_ffn = use_pad_tok_in_ffn
+        self.ds_activation_checkpointing = ds_activation_checkpointing
 
         if 'name' in kwargs:
             del kwargs['name']

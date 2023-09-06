@@ -86,6 +86,7 @@ from llmfoundry.models.utils.act_ckpt import (
     check_mapping_blocks_overlap,
 )
 
+from deepspeed.runtime.activation_checkpointing.checkpointing import checkpoint as ds_checkpoint
 import logging
 
 log = logging.getLogger(__name__)
@@ -335,6 +336,7 @@ class MPTModel(MPTPreTrainedModel):
         self.attn_uses_sequence_id = config.attn_config['attn_uses_sequence_id']
         self.alibi = config.attn_config['alibi']
         self.alibi_bias_max = config.attn_config['alibi_bias_max']
+        self.ds_activation_checkpointing = config.ds_activation_checkpointing
 
         self.learned_pos_emb = config.learned_pos_emb
 
@@ -519,6 +521,13 @@ class MPTModel(MPTPreTrainedModel):
             )
 
         return attn_bias, attention_mask
+
+    def custom(self, module, a, b, c, d, e, f):
+        def custom_forward(*inputs):
+            g = inputs[0]
+            x, y, z = module(g, a, b, c, self.is_causal, d, e, f)
+            return x, y, z
+        return custom_forward
 
     def forward(
         self,
@@ -711,22 +720,26 @@ class MPTModel(MPTPreTrainedModel):
             if output_hidden_states:
                 assert all_hidden_states is not None  # pyright
                 all_hidden_states = all_hidden_states + (x,)
-            past_key_value = (
-                past_key_values[b_idx] if past_key_values is not None else None
-            )
-            x, attn_weights, present = block(
-                x,
-                past_key_value=past_key_value,
-                attn_bias=attn_bias,
-                rotary_emb_w_meta_info=rotary_emb_w_meta_info,
-                attention_mask=attention_mask,
-                is_causal=self.is_causal,
-                output_attentions=bool(output_attentions),
-                alibi_slopes=alibi_slopes,
-                flash_attn_padding_info=flash_attn_padding_info,
-            )
-            if presents is not None:
-                presents += (present,)
+            past_key_value = (past_key_values[b_idx]
+                              if past_key_values is not None else None)
+            if self.ds_activation_checkpointing:
+                x, attn_weights, past_key_value = ds_checkpoint(self.custom(block, past_key_values, attn_bias, attention_mask, bool(output_attentions), alibi_slopes, flash_attn_padding_info), x)
+            else:
+                x, attn_weights, past_key_value = block(
+                    x,
+                    past_key_value=past_key_value,
+                    attn_bias=attn_bias,
+                    rotary_emb_w_meta_info=rotary_emb_w_meta_info,
+                    attention_mask=attention_mask,
+                    is_causal=self.is_causal,
+                    output_attentions=bool(output_attentions),
+                    alibi_slopes=alibi_slopes,
+                    flash_attn_padding_info=flash_attn_padding_info,
+                )
+                if presents is not None:
+                    presents += (present,)
+            if past_key_values is not None:
+                past_key_values[b_idx] = past_key_value
 
             if output_attentions:
                 assert all_self_attns is not None  # pyright
