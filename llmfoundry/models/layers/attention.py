@@ -5,7 +5,7 @@
 
 import math
 import warnings
-from typing import Any, Optional
+from typing import Any, Optional, Tuple, List
 
 import torch
 import torch.nn as nn
@@ -138,8 +138,8 @@ def scaled_multihead_dot_product_attention(
     key: torch.Tensor,
     value: torch.Tensor,
     n_heads: int,
-    kv_n_heads: int,
-    past_key_value: Optional[tuple[torch.Tensor, torch.Tensor]] = None,
+    kv_n_heads: Optional[int] = None,
+    past_key_value: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     softmax_scale: Optional[float] = None,
     attn_bias: Optional[torch.Tensor] = None,
     key_padding_mask: Optional[torch.Tensor] = None,
@@ -147,7 +147,7 @@ def scaled_multihead_dot_product_attention(
     dropout_p: float = 0.0,
     training: bool = False,
     needs_weights: bool = False,
-) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor,
+) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor,
                                                                 torch.Tensor]]]:
 
     q = rearrange(query, 'b s (h d) -> b h s d', h=n_heads)
@@ -243,9 +243,8 @@ def scaled_multihead_dot_product_attention(
 
 
 def check_valid_inputs(
-    *tensors: torch.Tensor,
-    valid_dtypes: Optional[list[torch.dtype]] = None,
-):
+        *tensors: torch.Tensor,
+        valid_dtypes: Optional[List[torch.dtype]] = None):
     if valid_dtypes is None:
         valid_dtypes = [torch.float16, torch.bfloat16]
     for tensor in tensors:
@@ -260,8 +259,8 @@ def flash_attn_fn(
     key: torch.Tensor,
     value: torch.Tensor,
     n_heads: int,
-    kv_n_heads: int,
-    past_key_value: Optional[tuple[torch.Tensor, torch.Tensor]] = None,
+    kv_n_heads: Optional[int] = None,
+    past_key_value: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     softmax_scale: Optional[float] = None,
     attn_bias: Optional[torch.Tensor] = None,
     key_padding_mask: Optional[torch.Tensor] = None,
@@ -274,7 +273,7 @@ def flash_attn_fn(
     sliding_window_size: int = -1,
     alibi_slopes: Optional[torch.Tensor] = None,
     flash_attn_padding_info: Optional[dict[str, torch.Tensor]] = None,
-) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor,
+) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor,
                                                                 torch.Tensor]]]:
     if key_padding_mask is not None:
         raise ValueError('key_padding_mask should be None for flash attn.')
@@ -532,7 +531,7 @@ class GroupedQueryAttention(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        past_key_value: Optional[tuple[torch.Tensor, torch.Tensor]] = None,
+        past_key_value: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
         attn_bias: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
         rotary_emb_w_meta_info: Optional[dict] = None,
@@ -540,8 +539,8 @@ class GroupedQueryAttention(nn.Module):
         needs_weights: bool = False,
         alibi_slopes: Optional[torch.Tensor] = None,
         flash_attn_padding_info: Optional[dict[str, torch.Tensor]] = None,
-    ) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[
-        torch.Tensor, torch.Tensor]]]:
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[
+            torch.Tensor, torch.Tensor]]]:
         qkv = self.Wqkv(x)
 
         if self.clip_qkv:
@@ -751,7 +750,7 @@ def attn_bias_shape(
     alibi: bool,
     causal: bool,
     use_sequence_id: bool,
-) -> Optional[tuple[int, int, int, int]]:
+) -> Optional[Tuple[int, int, int, int]]:
     if attn_impl == 'flash':
         return None
     elif attn_impl in ['torch', 'habana_fused_sdpa']:
