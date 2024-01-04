@@ -221,7 +221,7 @@ def main(cfg: DictConfig) -> Trainer:
         must_exist=False,
         default_value=600.0,
     )
-    device: bool = pop_config(
+    device: Optional[str] = pop_config(
         cfg,
         'device',
         must_exist=False,
@@ -799,5 +799,4 @@ if __name__ == '__main__':
     cfg = om.merge(yaml_cfg, cli_cfg)
     om.resolve(cfg)
     assert isinstance(cfg, DictConfig)
-    print (cfg)
     main(cfg)
