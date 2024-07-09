@@ -167,7 +167,7 @@ class StreamingTextDataset(StreamingDataset):
         # Build Dataset
         super().__init__(
             streams=streams,
-            remote=remote,
+            remote=None,
             local=local,
             split=split,
             download_retry=download_retry,

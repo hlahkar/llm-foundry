@@ -223,13 +223,9 @@ def main(cfg: DictConfig) -> Trainer:
         default_value=None
     )
 
-    deepspeed_config: Optional[Dict[str, Any]] = pop_config(
-        cfg,
-        'deepspeed_config',
-        must_exist=False,
-        default_value=None,
-        convert=True
-    )
+    deepspeed_config = train_cfg.deepspeed_config
+    device = train_cfg.device
+
     _initialize_dist_with_barrier(dist_timeout=train_cfg.dist_timeout, device=device)
 
     # Filter deprecation warning from torch internal usage

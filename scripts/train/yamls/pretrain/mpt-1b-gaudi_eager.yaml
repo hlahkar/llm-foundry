@@ -91,21 +91,21 @@ device_train_microbatch_size: 8
 precision: amp_bf16
 
 # # FSDP
-# fsdp_config:
-#   sharding_strategy: FULL_SHARD
-#   mixed_precision: PURE
-#   activation_checkpointing: false
-#   activation_checkpointing_reentrant: false
-#   activation_cpu_offload: false
-#   limit_all_gathers: true
-#   verbose: false
-deepspeed_config:
-  bf16:
-    enabled: true
-  gradient_clipping: 1.0
-  zero_optimization:
-    stage: 2
-  zero_allow_untested_optimizer: true
+fsdp_config:
+  sharding_strategy: FULL_SHARD
+  mixed_precision: PURE
+  activation_checkpointing: false
+  activation_checkpointing_reentrant: false
+  activation_cpu_offload: false
+  limit_all_gathers: true
+  verbose: false
+# deepspeed_config:
+#   bf16:
+#     enabled: true
+#   gradient_clipping: 1.0
+#   zero_optimization:
+#     stage: 2
+#   zero_allow_untested_optimizer: true
 
 # Logging
 progress_bar: false
