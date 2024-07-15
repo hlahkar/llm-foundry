@@ -1376,7 +1376,14 @@ class ComposerMPTCausalLM(HuggingFaceModel):
         return targets
 
     def forward(self, batch: MutableMapping) -> CausalLMOutputWithPast:
-        if self.config.ffn_config['ffn_type'] in ffns_with_megablocks:
+        """
+        Skip the following condition statement (required for MoE)
+        if model is instance of MPTForCausalLM. This change is
+        required to avoid error (assertion error in dynamo) when
+        executing MPTForCausalLM in torch.compile mode.
+        """
+        skip_check = not (self.model_class==MPTForCausalLM)
+        if skip_check and self.config.ffn_config['ffn_type'] in ffns_with_megablocks:
             # Clear MegaBlocks MoE load balancing loss cache
             try:  # Add try/catch to avoid transformers complaining and raising errors
                 from megablocks.layers.moe import clear_load_balancing_loss
